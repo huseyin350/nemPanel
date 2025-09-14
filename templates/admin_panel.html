@@ -1,0 +1,303 @@
+<!-- templates/admin_panel.html - Updated for app.py
+This admin_panel.html is server-rendered with Jinja and works with the routes
+provided in app.py (uses /admin/generate for creation). It lists keys (`keys` var)
+and allows single-create via backend, CSV export, copy, search and simple UI.
+
+Notes:
+- Admin logout link points to /logout. If you'd prefer a dedicated /admin/logout,
+  add that route to app.py and change the link.
+- Toggling activation requires a backend endpoint (/admin/toggle) — current
+  app.py doesn't implement it; the UI calls a placeholder and explains that.
+-->
+
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>NEM — Yönetici Paneli</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#04060b; --card:rgba(255,255,255,0.03); --muted:#9fb0c9;
+      --accent1:#7c3aed; --accent2:#06b6d4; --glass:rgba(255,255,255,0.02)
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,system-ui,Arial;background:linear-gradient(180deg,var(--bg),#000);color:#e6eef8}
+    header{display:flex;justify-content:space-between;align-items:center;padding:18px 28px;border-bottom:1px solid rgba(255,255,255,0.03)}
+    .brand{display:flex;gap:12px;align-items:center}
+    .logo{width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,var(--accent2),var(--accent1));box-shadow:0 8px 36px rgba(124,58,237,0.12)}
+    h1{margin:0;font-size:18px}
+    .subtitle{font-size:13px;color:var(--muted)}
+
+    .actions{display:flex;gap:10px;align-items:center}
+    .btn{padding:10px 14px;border-radius:10px;border:0;cursor:pointer;font-weight:700}
+    .btn-primary{background:linear-gradient(90deg,var(--accent2),var(--accent1));color:white}
+    .btn-ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted)}
+
+    .container{padding:22px}
+    .grid{display:grid;grid-template-columns:320px 1fr;gap:20px}
+    .panel{background:var(--card);padding:18px;border-radius:14px;box-shadow:0 10px 40px rgba(2,6,23,.6)}
+
+    /* left */
+    .stat{padding:12px;border-radius:10px;background:linear-gradient(180deg,rgba(255,255,255,0.01),transparent);margin-bottom:10px}
+    .stat h3{margin:0 0 6px}
+    .muted{color:var(--muted);font-size:13px}
+
+    label{display:block;margin-top:8px;color:var(--muted);font-size:13px}
+    select,input[type=number],input[type=text]{width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:inherit;margin-top:6px}
+
+    /* right */
+    .toolbar{display:flex;gap:10px;align-items:center;margin-bottom:12px}
+    .search{flex:1}
+    .search input{width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:inherit}
+
+    .table-wrap{overflow:auto;border-radius:10px}
+    table{width:100%;border-collapse:collapse;min-width:980px}
+    th,td{padding:12px;text-align:left;border-bottom:1px solid rgba(255,255,255,0.04)}
+    th{font-size:13px;color:var(--muted)}
+    td{font-size:14px}
+    code.key{font-weight:700;letter-spacing:1px;background:rgba(255,255,255,0.02);padding:6px;border-radius:6px}
+
+    .chip{display:inline-block;padding:6px 8px;border-radius:999px;font-weight:700}
+    .plan-free{background:rgba(255,255,255,0.02);color:var(--muted)}
+    .plan-1week{background:linear-gradient(90deg,#fde68a,#fca5a5);color:#071124}
+    .plan-1month{background:linear-gradient(90deg,#93c5fd,#7dd3fc);color:#071124}
+    .plan-3month{background:linear-gradient(90deg,#b794f4,#7c3aed);color:#fff}
+    .plan-1year{background:linear-gradient(90deg,#34d399,#60a5fa);color:#071124}
+
+    .small-muted{font-size:12px;color:var(--muted)}
+    .copy-btn{cursor:pointer;padding:6px 8px;border-radius:8px;border:0;background:rgba(255,255,255,0.03);margin-right:6px}
+
+    /* modal */
+    .modal-backdrop{position:fixed;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,0.6);display:none;align-items:center;justify-content:center}
+    .modal{background:linear-gradient(180deg,#061223,#021018);padding:20px;border-radius:12px;width:760px;max-width:94%}
+
+    @media(max-width:1000px){.grid{grid-template-columns:1fr;}.container{padding:12px}}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <div class="logo" aria-hidden></div>
+      <div>
+        <h1>NEM — Yönetici</h1>
+        <div class="subtitle">Key üretimi · Yönetim · İstatistik</div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <div class="small-muted">Hoşgeldin, <strong>admin</strong></div>
+      <a href="/logout" class="btn btn-ghost">Oturumu Kapat</a>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="grid">
+      <aside class="panel">
+        <h3>Hızlı Kontroller</h3>
+        <div class="stat">
+          <h3>Toplam Key</h3>
+          <div class="muted">{{ keys|length }} adet</div>
+        </div>
+        <div class="stat">
+          <h3>Aktif</h3>
+          <div class="muted">{{ keys|selectattr('active')|list|length }} adet</div>
+        </div>
+        <div class="stat">
+          <h3>Pasif</h3>
+          <div class="muted">{{ keys|selectattr('active','equalto',False)|list|length }} adet</div>
+        </div>
+
+        <hr style="margin:14px 0;border:none;border-top:1px solid rgba(255,255,255,0.03)">
+
+        <h3>Yeni Key Oluştur</h3>
+        <form id="createForm" onsubmit="return createSingle(event)">
+          <label>Plan</label>
+          <select id="planSelect">
+            <option value="1week">1 Hafta</option>
+            <option value="1month" selected>1 Ay</option>
+            <option value="3month">3 Ay</option>
+            <option value="1year">1 Yıl</option>
+            <option value="free">Free</option>
+          </select>
+          <label>Not (opsiyonel)</label>
+          <input type="text" id="noteInput" placeholder="Kullanıcı veya açıklama" />
+          <label>Adet</label>
+          <input type="number" id="qtyInput" value="1" min="1" max="200" />
+          <div style="display:flex;gap:8px;margin-top:10px">
+            <button class="btn btn-primary" type="submit">Oluştur</button>
+            <button type="button" class="btn btn-ghost" onclick="openBulkModal()">Toplu</button>
+          </div>
+        </form>
+
+        <div style="margin-top:12px;color:var(--muted);font-size:13px">Not: Çok sayıda free anahtar üretimi prod ortamda sınırlanmalı.</div>
+      </aside>
+
+      <section class="panel">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <div class="toolbar">
+            <div class="search" style="width:420px"><input id="searchInput" placeholder="Ara: key, plan, not" oninput="filterTable()" /></div>
+            <select id="planFilter" onchange="filterTable()" style="padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:inherit">
+              <option value="all">Tümü</option>
+              <option value="1week">1 Hafta</option>
+              <option value="1month">1 Ay</option>
+              <option value="3month">3 Ay</option>
+              <option value="1year">1 Yıl</option>
+              <option value="free">Free</option>
+            </select>
+          </div>
+
+          <div style="display:flex;gap:8px;align-items:center">
+            <button class="btn btn-ghost" onclick="exportCSV()">CSV Dışa Aktar</button>
+            <button class="btn btn-primary" onclick="openBulkModal()">Toplu Oluştur & İndir</button>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table id="keysTable">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Key</th>
+                <th>Plan</th>
+                <th>Oluşturma</th>
+                <th>Geçerlilik</th>
+                <th>Aktif</th>
+                <th>Not</th>
+                <th>İşlemler</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for k in keys %}
+                <tr data-key="{{ k.key }}" data-plan="{{ k.plan }}" data-active="{{ '1' if k.active else '0' }}" data-note="{{ k.notes or '' }}">
+                  <td>{{ k.id }}</td>
+                  <td><code class="key">{{ k.key }}</code></td>
+                  <td><span class="chip plan-{{ k.plan }}">{{ k.plan }}</span></td>
+                  <td>{{ k.created_at }}</td>
+                  <td>{% if k.expires_at %}{{ k.expires_at }}{% else %}Sonsuz{% endif %}</td>
+                  <td>{{ 'Evet' if k.active else 'Hayır' }}</td>
+                  <td class="small-muted">{{ k.notes or '—' }}</td>
+                  <td>
+                    <button class="copy-btn" onclick="copyKey('{{ k.key }}')">Kopyala</button>
+                    <button class="copy-btn" onclick="alert('Aktif/pasif togglesi için backend endpoint ekle: /admin/toggle?key=...')">{{ 'Pasif Yap' if k.active else 'Aktif Et' }}</button>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+      </section>
+    </div>
+  </main>
+
+  <!-- Bulk modal -->
+  <div id="modalBackdrop" class="modal-backdrop">
+    <div class="modal" role="dialog" aria-modal="true">
+      <h2>Toplu Key Üret & İndir</h2>
+      <p style="color:var(--muted)">İstediğiniz sayıda anahtar oluşturup CSV olarak indirebilirsiniz. Büyük miktarlar için arka planda işlem yapmayı düşünün.</p>
+
+      <div style="margin-top:12px">
+        <label>Plan</label>
+        <select id="bulkPlan">
+          <option value="1week">1 Hafta</option>
+          <option value="1month" selected>1 Ay</option>
+          <option value="3month">3 Ay</option>
+          <option value="1year">1 Yıl</option>
+          <option value="free">Free</option>
+        </select>
+        <label>Adet</label>
+        <input type="number" id="bulkQty" value="20" min="1" max="1000" />
+      </div>
+
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+        <button class="btn btn-ghost" onclick="closeBulkModal()">Kapat</button>
+        <button class="btn btn-primary" onclick="bulkGenerate()">Oluştur & İndir</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // copy helper
+    function copyKey(k){
+      navigator.clipboard.writeText(k).then(()=>{ alert('Key kopyalandı: '+k); });
+    }
+
+    function openBulkModal(){document.getElementById('modalBackdrop').style.display='flex'}
+    function closeBulkModal(){document.getElementById('modalBackdrop').style.display='none'}
+
+    // create single key by calling backend (admin must be logged in)
+    async function createSingle(e){
+      e.preventDefault();
+      const plan = document.getElementById('planSelect').value;
+      const qty = parseInt(document.getElementById('qtyInput').value)||1;
+      if(qty>10 && !confirm('10dan fazla üretmek istiyor musunuz?')) return false;
+      for(let i=0;i<qty;i++){
+        const resp = await fetch('/admin/generate?plan='+encodeURIComponent(plan));
+        const text = await resp.text();
+        console.log(text);
+      }
+      alert('Oluşturma tamamlandı. Sayfayı yenileyin.');
+      return false;
+    }
+
+    async function bulkGenerate(){
+      const plan = document.getElementById('bulkPlan').value;
+      const qty = parseInt(document.getElementById('bulkQty').value)||20;
+      if(qty>500 && !confirm('500den fazla üretmek istiyor musunuz?')) return;
+      const results = [];
+      for(let i=0;i<qty;i++){
+        const resp = await fetch('/admin/generate?plan='+encodeURIComponent(plan));
+        const text = await resp.text();
+        const m = text.match(/New key created:\s*([A-Z0-9]+)/);
+        if(m) results.push(m[1]);
+      }
+      if(results.length>0){
+        let csv = 'key,plan\n';
+        results.forEach(k=>{ csv += k + ',' + plan + '\n' });
+        const blob = new Blob([csv], {type:'text/csv'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href=url; a.download='keys_'+Date.now()+'.csv'; a.click(); URL.revokeObjectURL(url);
+      }
+      closeBulkModal();
+      alert('Toplu üretim tamamlandı.');
+    }
+
+    function filterTable(){
+      const q = document.getElementById('searchInput').value.toLowerCase();
+      const plan = document.getElementById('planFilter').value;
+      const rows = document.querySelectorAll('#keysTable tbody tr');
+      rows.forEach(r=>{
+        const k = r.dataset.key.toLowerCase();
+        const p = r.dataset.plan;
+        const n = (r.dataset.note||'').toLowerCase();
+        let show = true;
+        if(plan!=='all' && p!==plan) show=false;
+        if(q && !(k.includes(q) || p.includes(q) || n.includes(q))) show=false;
+        r.style.display = show ? '' : 'none';
+      });
+    }
+
+    function exportCSV(){
+      const rows = Array.from(document.querySelectorAll('#keysTable tbody tr')).filter(r=>r.style.display!=='none');
+      let csv = 'id,key,plan,created_at,expires_at,active,notes\n';
+      rows.forEach(r=>{
+        const cols = r.querySelectorAll('td');
+        const id = cols[0].innerText.trim();
+        const key = cols[1].innerText.trim();
+        const plan = cols[2].innerText.trim();
+        const created = cols[3].innerText.trim();
+        const expires = cols[4].innerText.trim();
+        const active = cols[5].innerText.trim();
+        const notes = cols[6].innerText.trim();
+        csv += [id,key,plan,created,expires,active,notes].map(v=> '"'+v.replace(/"/g,'""')+'"').join(',') + '\n';
+      });
+      const blob = new Blob([csv], {type:'text/csv'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href=url; a.download='keneviz_keys_'+Date.now()+'.csv'; a.click(); URL.revokeObjectURL(url);
+    }
+
+  </script>
+</body>
+</html>
