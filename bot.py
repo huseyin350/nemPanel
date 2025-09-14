@@ -30,7 +30,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{DB_PATH}'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', secrets.token_urlsafe(32))
 
-ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'babapro31')
+ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'sistemnabide')
 
 db = SQLAlchemy(app)
 
