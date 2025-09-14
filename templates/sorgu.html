@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>VIP Sorgu Paneli — Sorgu</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Space+Grotesk:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root{--bg-1:#05040b;--bg-2:#071428;--gold:#ffd94d;--muted:rgba(255,255,255,0.62);--glass-border: rgba(255,255,255,0.04);--accent-grad: linear-gradient(90deg,#ffd94d,#ff7a6c 60%);}
+    html,body{height:100%;margin:0;font-family:'Poppins',sans-serif;color:#fff;background:
+      radial-gradient(800px 400px at 10% 10%, rgba(255,217,102,0.03), transparent 8%),
+      radial-gradient(700px 300px at 90% 80%, rgba(255,120,97,0.02), transparent 10%),
+      linear-gradient(180deg,var(--bg-1),var(--bg-2));
+      display:flex;align-items:center;justify-content:center;padding:28px 28px 60px;overflow:auto;}
+    *{box-sizing:border-box}
+    .stage{z-index:1;width:100%;max-width:1120px;display:grid;grid-template-columns:440px 1fr;gap:28px;align-items:start}
+    .card{position:relative;border-radius:18px;padding:26px;background:linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.015));border:1px solid var(--glass-border);box-shadow:0 12px 40px rgba(2,6,23,0.6);backdrop-filter: blur(6px) saturate(1.05)}
+    .brand{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+    .logo{width:62px;height:62px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--gold);background:linear-gradient(135deg,#0b1420 0%, rgba(255,255,255,0.02) 50%);border:1px solid rgba(255,255,255,0.04)}
+    .home-btn{position:absolute;right:18px;top:18px;padding:8px 12px;border-radius:10px;background:rgba(255,255,255,0.03);color:var(--gold);text-decoration:none;font-weight:700;border:1px solid rgba(255,255,255,0.06)}
+    h1#form-title{font-family:'Space Grotesk',sans-serif;font-size:1.45rem;margin:0 0 12px 0;color:var(--gold)}
+    .subbar{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+    form{width:100%;display:flex;flex-direction:column;gap:12px;margin-top:8px}
+    input[type='text']{width:100%;padding:14px 16px;border-radius:12px;border:1px solid rgba(255,255,255,0.06);background:linear-gradient(180deg, rgba(255,255,255,0.03), rgba(0,0,0,0.24));color:#fff;font-size:0.98rem;outline:none}
+    button{border:none;padding:13px 18px;border-radius:12px;font-weight:800;font-size:1rem;cursor:pointer;background:var(--accent-grad);color:#0a0a0a}
+    #result{margin-top:18px;padding:18px;border-radius:12px;background:linear-gradient(180deg,rgba(3,6,23,0.6),rgba(3,6,23,0.45));border:1px solid rgba(255,255,255,0.03);font-size:0.98rem;min-height:80px;max-height:420px;overflow:auto;white-space:pre-wrap}
+    .info{border-radius:18px;padding:20px;background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));border:1px solid rgba(255,255,255,0.04)}
+    @media(max-width:980px){.stage{grid-template-columns:1fr;padding:12px}}
+  </style>
+</head>
+<body>
+  <div class="stage">
+    <div class="card">
+      <div class="brand">
+        <div class="logo"><i class="fa-solid fa-crown"></i></div>
+        <div>
+          <h2>NEM SORGU</h2>
+          <p class="muted">VIP Sorgu</p>
+        </div>
+        <a href="/" class="home-btn"><i class="fa-solid fa-house"></i> Anasayfa</a>
+      </div>
+
+      <h1 id="form-title">VIP Sorgu Paneli</h1>
+      <div class="subbar">
+        <div class="pill">Dinamik Form</div>
+      </div>
+
+      <form id="queryForm"></form>
+
+      <div id="result"></div>
+    </div>
+
+    <div class="info">
+      <div style="margin-bottom:10px;color:var(--muted)">Sorgu Tipi: <span id="displayApi">—</span></div>
+      <div style="color:var(--muted);font-size:0.9rem">API'den dönen ham yanıtın içinde bozuk görünen Unicode kaçışları otomatik düzeltilir.</div>
+    </div>
+  </div>
+
+  <script>
+    const api = new URLSearchParams(window.location.search).get('api');
+    const formTitle = document.getElementById('form-title');
+    const form = document.getElementById('queryForm');
+    const resultDiv = document.getElementById('result');
+
+    const apiInputs = {
+      'tc_sorgulama': ['tc'],
+      'ad_soyad': ['ad','soyad','il','ilce'],
+      'ip': ['domain'],
+      'telegram_sorgu': ['kullanici'],
+      'email': ['email'],
+      'nude': []
+    };
+
+    function buildForm(){
+      const inputs = apiInputs[api];
+      if(!inputs){
+        formTitle.textContent = 'Geçersiz Sorgu';
+        form.innerHTML = '<p>Geçersiz veya desteklenmeyen sorgu türü.</p>';
+        document.getElementById('displayApi').textContent = 'Geçersiz';
+        return;
+      }
+      formTitle.textContent = api ? (api.replace(/_/g,' ').toUpperCase() + ' SorgU') : 'GENEL SORGULAMA';
+      document.getElementById('displayApi').textContent = api || '—';
+      form.innerHTML = '';
+      inputs.forEach(i=>{
+        form.innerHTML += `<input type="text" id="${i}" placeholder="${i}" />`;
+      });
+      form.innerHTML += '<button type="submit">Sorgula</button>';
+    }
+
+    buildForm();
+
+    // sadece bozuk görünen \uXXXX kaçışlarını düzeltir
+    function decodeUnicodeEscapes(str){
+      if(str === null || str === undefined) return '';
+      // replace \uXXXX
+      const step1 = str.replace(/\\u([0-9a-fA-F]{4})/g, (m, grp) => {
+        try { return String.fromCharCode(parseInt(grp, 16)); } catch(e){ return m; }
+      });
+      // ayrıca çift slashed \\u şeklinde geliyorsa da yakalar
+      const step2 = step1.replace(/\\\\u([0-9a-fA-F]{4})/g, (m, grp) => {
+        try { return String.fromCharCode(parseInt(grp, 16)); } catch(e){ return m; }
+      });
+      return step2;
+    }
+
+    form.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+
+      const body = { api };
+      const inputs = apiInputs[api];
+      if(inputs) inputs.forEach(i=>{
+        const el = document.getElementById(i);
+        body[i] = el ? el.value.trim() : '';
+      });
+
+      try {
+        const res = await fetch('/api/sorgu', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        const text = await res.text();
+
+        // burada sadece unicode kaçışlarını düzeltiyoruz; başka değişiklik yok
+        const fixed = decodeUnicodeEscapes(text);
+        resultDiv.textContent = fixed;
+
+      } catch(err) {
+        resultDiv.textContent = 'Hata: ' + err.message;
+      }
+    });
+  </script>
+</body>
+  </html>
