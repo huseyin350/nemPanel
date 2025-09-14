@@ -1,0 +1,116 @@
+<!-- templates/login.html -->
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>NEM — Key ile Giriş</title>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg1:#071124; --bg2:#021018; --card:rgba(255,255,255,0.03);
+      --accent1:#7c3aed; --accent2:#06b6d4; --muted:#99b4c6;
+    }
+    *{box-sizing:border-box}
+    body{font-family:Inter,system-ui,Arial; margin:0; min-height:100vh; background:linear-gradient(180deg,var(--bg1),#000); color:#e6eef8}
+    .wrap{display:grid; grid-template-columns:1fr 460px; gap:40px; align-items:center; min-height:100vh; padding:40px}
+
+    /* left - marketing / art */
+    .hero{padding:48px 40px;}
+    .logo{display:flex;align-items:center;gap:12px}
+    .logo .dot{width:42px;height:42px;border-radius:10px;background:linear-gradient(135deg,var(--accent2),var(--accent1));box-shadow:0 6px 22px rgba(124,58,237,.25)}
+    h1{font-size:36px;margin:18px 0 8px}
+    p.lead{color:var(--muted);max-width:54ch}
+
+    /* floating card */
+    .art-card{margin-top:30px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); padding:18px; border-radius:16px; width:100%; box-shadow:0 8px 40px rgba(2,6,23,.6)}
+    .art-grid{display:flex; gap:12px;}
+    .art-item{flex:1; height:110px; border-radius:10px; background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); display:flex; align-items:center; justify-content:center; font-weight:700; color:var(--muted)}
+
+    /* right - login card */
+    .card{background:var(--card); padding:26px; border-radius:16px; box-shadow:0 20px 40px rgba(2,6,23,.7)}
+    .card h2{margin:0 0 6px;font-size:20px}
+    .small{color:var(--muted);font-size:13px;margin-bottom:12px}
+
+    form{margin-top:12px}
+    input[type=text]{width:100%;padding:12px 14px;border-radius:10px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:inherit;font-size:15px}
+    .actions{display:flex;gap:10px;align-items:center;margin-top:12px}
+    .btn{padding:10px 12px;border-radius:10px;border:0;cursor:pointer;font-weight:700}
+    .btn-primary{background:linear-gradient(90deg,var(--accent2),var(--accent1));color:white}
+    .btn-ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted)}
+
+    .meta{margin-top:14px;color:var(--muted);font-size:13px}
+    .flash{background:rgba(255,255,255,0.02);padding:10px;border-radius:8px;margin-top:10px;color:#ffd9d9}
+
+    /* small helper */
+    footer{position:fixed;left:20px;bottom:16px;color:var(--muted);font-size:13px}
+
+    @media(max-width:940px){
+      .wrap{grid-template-columns:1fr; padding:20px}
+      .hero{order:2}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hero">
+      <div class="logo">
+        <div class="dot"></div>
+        <div>
+          <div style="font-weight:800">NEM</div>
+          <div style="font-size:12px;color:var(--muted)">VIP API Panel</div>
+        </div>
+      </div>
+      <h1>Güçlü, Basit ve Hızlı — Key ile Giriş</h1>
+      <p class="lead">Tek bir 20 haneli anahtar ile panelimize erişin. Anahtar türüne göre (1 hafta / 1 ay / 3 ay / 1 yıl / free) API erişimi sağlanır. Süresi dolan anahtarlar ücretsiz plana düşer.</p>
+
+      <div class="art-card">
+        <div class="art-grid">
+          <div class="art-item">API Katalogu</div>
+          <div class="art-item">Hızlı Çağrı</div>
+          <div class="art-item">VIP Yönetim</div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <h2>Key ile Giriş</h2>
+        <div class="small">Lütfen 20 haneli anahtarınızı girin. (Ör: ABCDEFGHIJKLMNOPQRS)</div>
+
+        {% with messages = get_flashed_messages() %}
+          {% if messages %}
+            <div class="flash">{{ messages[0] }}</div>
+          {% endif %}
+        {% endwith %}
+
+        <form method="post" action="/login" id="keyForm" onsubmit="return validateKey();">
+          <input type="text" name="key" id="keyInput" placeholder="Anahtarınızı buraya yapıştırın" maxlength="64" autofocus />
+          <div class="actions">
+            <button class="btn btn-primary" type="submit">Giriş Yap</button>
+            <a class="btn btn-ghost" href="/">Geri</a>
+          </div>
+        </form>
+
+        <div class="meta">Anahtarınız yok mu? Yöneticiye ulaş veya /admin panelinden demo anahtar üret.</div>
+      </div>
+    </div>
+  </div>
+
+  <footer>© NEM — Tüm hakları saklıdır</footer>
+
+  <script>
+    function validateKey(){
+      const v = document.getElementById('keyInput').value.trim();
+      if(!v){ alert('Lütfen bir key girin'); return false; }
+      if(v.length < 12){ alert('Key çok kısa görünüyor'); return false; }
+      // allow various lengths (free keys may be shorter) but warn if not 20
+      if(v.length !== 20){
+        return confirm('Key 20 haneli değil. Devam etmek istiyor musunuz?');
+      }
+      return true;
+    }
+  </script>
+</body>
+</html>
